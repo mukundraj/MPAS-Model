@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<config case="mesh">
+
+	<add_executable source="mesh_converter" dest="MpasMeshConverter.x"/>
+
+	<add_link source_path="mpas_model" source="testing_and_setup/compass/ocean/jigsaw_to_MPAS/build_mesh.sh" dest="build_mesh.sh"/>
+	<add_link source_path="mpas_model" source="testing_and_setup/compass/ocean/jigsaw_to_MPAS/driver_jigsaw_to_mpas.m" dest="driver_jigsaw_to_mpas.m"/>
+	<add_link source_path="mpas_model" source="testing_and_setup/compass/ocean/jigsaw_to_MPAS/mesh_definition_tools" dest="mesh_definition_tools"/>
+	<add_link source_path="mpas_model" source="testing_and_setup/compass/ocean/jigsaw_to_MPAS/define_mesh/QU240.m" dest="meshName.m"/>
+	<add_link source_path="jigsaw-geo-matlab" source="." dest="jigsaw-geo-matlab"/>
+
+	<run_script name="run.py">
+		<step executable="./build_mesh.sh">
+		</step>
+	</run_script>
+</config>

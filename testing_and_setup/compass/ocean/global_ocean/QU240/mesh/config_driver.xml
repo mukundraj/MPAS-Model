@@ -1,0 +1,5 @@
+<driver_script name="run_test.py">
+	<case name="mesh">
+		<step executable="./run.py" quiet="true" pre_message=" * Creating mesh" post_message=" - Complete"/>
+	</case>
+</driver_script>
