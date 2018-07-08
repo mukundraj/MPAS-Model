@@ -18,4 +18,4 @@ function [cellWidthGlobal,lon,lat] = Arctic60to9_Atl45deg
    PacNH = mergeCellWidthVsLat(lat, 30*QU1, 9*QU1, 45, 10);
    PacGrid = mergeCellWidthVsLat(lat, EC60to30, PacNH, 0, 1);
 
-	 cellWidthGlobal = AtlanticPacificGrid(lon, lat, AtlGrid, PacGrid);
+   cellWidthGlobal = AtlanticPacificGrid(lon, lat, AtlGrid, PacGrid);
