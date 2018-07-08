@@ -8,7 +8,7 @@
 	<add_link source_path="mpas_model" source="testing_and_setup/compass/ocean/jigsaw_to_MPAS/jigsaw_tools/triangle_jigsaw_to_netcdf.py" dest="triangle_jigsaw_to_netcdf.py"/>
 	<add_link source_path="mpas_model" source="testing_and_setup/compass/ocean/jigsaw_to_MPAS/jigsaw_tools/inject_bathymetry.py" dest="inject_bathymetry.py"/>
 	<add_link source_path="mpas_model" source="testing_and_setup/compass/ocean/jigsaw_to_MPAS/mesh_definition_tools" dest="mesh_definition_tools"/>
-	<add_link source_path="mpas_model" source="testing_and_setup/compass/ocean/jigsaw_to_MPAS/define_mesh/QU240.m" dest="meshName.m"/>
+	<add_link source_path="mpas_model" source="testing_and_setup/compass/ocean/jigsaw_to_MPAS/define_mesh/QU240.m" dest="mesh.m"/>
 	<add_link source_path="mpas_tools" source="visualization/paraview_vtk_field_extractor/paraview_vtk_field_extractor.py" dest="paraview_vtk_field_extractor.py"/>
 	<add_link source_path="jigsaw-geo-matlab" source="." dest="jigsaw-geo-matlab"/>
 	<add_link source_path="jigsaw-geo-matlab" source="jigsaw/geo/topo.msh" dest="topo.msh"/>
