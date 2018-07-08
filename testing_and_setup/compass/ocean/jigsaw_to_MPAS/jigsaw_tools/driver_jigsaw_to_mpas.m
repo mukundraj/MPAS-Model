@@ -16,7 +16,7 @@ function driver_jigsaw_to_mpas
    addpath([pathToJigsaw '/mesh-util'])
    
 	 % temporary name
-	 meshName = 'meshName'
+	 meshName = 'mesh'
    %------------------------------------ setup files for JIGSAW
    
    opts.geom_file = [ meshName '.msh'];      % GEOM file
