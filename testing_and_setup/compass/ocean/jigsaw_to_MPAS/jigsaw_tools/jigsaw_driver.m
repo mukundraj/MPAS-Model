@@ -1,35 +1,29 @@
-function driver_jigsaw_to_mpas
+function jigsaw_driver
 %-----------------------------------------------------------
 %   Mark Petersen (mpetersen@lanl.gov)
 %   Phillip Wolfram (pwolfram@lanl.gov)
-%   04/01/2018
+%   07/01/2018
 %-----------------------------------------------------------
 
-	 pathToJigsaw = 'jigsaw-geo-matlab'
+   addpath('jigsaw-geo-matlab')
    
-   addpath(pathToJigsaw)
-   addpath([pathToJigsaw '/dual-mesh'])
-   addpath([pathToJigsaw '/jigsaw'])
-   addpath([pathToJigsaw '/mesh-util'])
-   
-	 % temporary name
-	 meshName = 'mesh'
    %------------------------------------ Load cellWidth, lon, lat
-   load('cellWidth.mat')
+
+   load('cellWidthVsLatLon.mat')
+
    %------------------------------------ setup files for JIGSAW
    
-   opts.geom_file = [ meshName '.msh'];      % GEOM file
-   opts.jcfg_file = [ meshName '.jig'];      % JCFG file
-   opts.mesh_file = [ meshName '-MESH.msh']; % MESH file
-   opts.hfun_file = [ meshName '-HFUN.msh']; % HFUN file
+   opts.geom_file = [ 'mesh.msh'];      % GEOM file
+   opts.jcfg_file = [ 'mesh.jig'];      % JCFG file
+   opts.mesh_file = [ 'mesh-MESH.msh']; % MESH file
+   opts.hfun_file = [ 'mesh-HFUN.msh']; % HFUN file
            
-   
    %------------------------------------ save HFUN data to file
    
    hmat.mshID = 'ELLIPSOID-GRID';
    hmat.point.coord{1} = lon*pi/180 ;
    hmat.point.coord{2} = lat*pi/180 ;
-   hmat.value = cellWidthGlobal ;
+   hmat.value = cellWidth ;
    
    savemsh(opts.hfun_file,hmat) ;
    
