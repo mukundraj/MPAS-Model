@@ -14,7 +14,7 @@ sys.path.append(".")
 import os
 import subprocess
 import scipy.io as sio
-import define_mesh
+import define_base_mesh
 
 def removeFile(fileName):
     try:
@@ -23,7 +23,7 @@ def removeFile(fileName):
         pass
 
 print 'Step 1. Build cellWidth array as function of latitude and longitude'
-cellWidth,lon,lat = define_mesh.cellWidthVsLatLon()
+cellWidth,lon,lat = define_base_mesh.cellWidthVsLatLon()
 sio.savemat('cellWidthVsLatLon.mat',{'cellWidth':cellWidth,'lon':lon,'lat':lat})
 
 print 'Step 2. Build mesh using JIGSAW' 
