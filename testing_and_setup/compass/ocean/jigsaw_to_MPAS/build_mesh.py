@@ -50,7 +50,7 @@ print 'Injecting bathymetry'
 args = ['./inject_bathymetry.py',
         'base_mesh.nc']
 print "running", ' '.join(args)
-subprocess.check_call(args, env=os.environ.copy())
+#subprocess.check_call(args, env=os.environ.copy())
 
 print 'Step 5. Create vtk file for visualization'
 args = ['./paraview_vtk_field_extractor.py',
@@ -61,3 +61,8 @@ args = ['./paraview_vtk_field_extractor.py',
         '-o', 'base_mesh_vtk']
 print "running", ' '.join(args)
 subprocess.check_call(args, env=os.environ.copy())
+
+print "***********************************************"
+print "**    The global mesh file is base_mesh.nc   **"
+print "***********************************************"
+

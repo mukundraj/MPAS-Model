@@ -4,10 +4,10 @@
 	<add_executable source="mesh_converter" dest="MpasMeshConverter.x"/>
 
 	<add_link source_path="mpas_model" source="testing_and_setup/compass/ocean/jigsaw_to_MPAS/build_mesh.py" dest="build_mesh.py"/>
-	<add_link source_path="mpas_model" source="testing_and_setup/compass/ocean/jigsaw_to_MPAS/jigsaw_tools/jigsaw_driver.m" dest="jigsaw_driver.m"/>
-	<add_link source_path="mpas_model" source="testing_and_setup/compass/ocean/jigsaw_to_MPAS/jigsaw_tools/triangle_jigsaw_to_netcdf.py" dest="triangle_jigsaw_to_netcdf.py"/>
-	<add_link source_path="mpas_model" source="testing_and_setup/compass/ocean/jigsaw_to_MPAS/jigsaw_tools/inject_bathymetry.py" dest="inject_bathymetry.py"/>
-	<add_link source_path="mpas_model" source="testing_and_setup/compass/ocean/jigsaw_to_MPAS/jigsaw_tools/mesh_definition_tools.py" dest="mesh_definition_tools.py"/>
+	<add_link source_path="mpas_model" source="testing_and_setup/compass/ocean/jigsaw_to_MPAS/jigsaw_driver.m" dest="jigsaw_driver.m"/>
+	<add_link source_path="mpas_model" source="testing_and_setup/compass/ocean/jigsaw_to_MPAS/triangle_jigsaw_to_netcdf.py" dest="triangle_jigsaw_to_netcdf.py"/>
+	<add_link source_path="mpas_model" source="testing_and_setup/compass/ocean/jigsaw_to_MPAS/inject_bathymetry.py" dest="inject_bathymetry.py"/>
+	<add_link source_path="mpas_model" source="testing_and_setup/compass/ocean/jigsaw_to_MPAS/mesh_definition_tools.py" dest="mesh_definition_tools.py"/>
 	<add_link source_path="mpas_model" source="testing_and_setup/compass/ocean/global_ocean/QU240/init/define_mesh.py" dest="define_mesh.py"/>
 	<add_link source_path="mpas_tools" source="visualization/paraview_vtk_field_extractor/paraview_vtk_field_extractor.py" dest="paraview_vtk_field_extractor.py"/>
 	<add_link source_path="jigsaw-geo-matlab" source="." dest="jigsaw-geo-matlab"/>
