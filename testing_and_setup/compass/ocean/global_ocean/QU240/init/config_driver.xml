@@ -1,4 +1,4 @@
-<driver_script name="run_test.py">
+<driver_script name="run.py">
 	<case name="base_mesh">
 		<step executable="./run.py" quiet="true" pre_message=" * Creating 2D global base mesh with jigsaw" post_message=" - Complete: base_mesh.nc"/>
 	</case>
@@ -6,6 +6,14 @@
 		<step executable="./run.py" quiet="true" pre_message=" * Culling land cells from 2D global mesh" post_message=" - Complete: culled_mesh.nc"/>
 	</case>
 	<case name="ocean_initial_state">
-		<step executable="./run.py" quiet="true" pre_message=" * Initializing ocean state with bathymetry and tracers" post_message=" - Complete: ocean_initial_state.nc"/>
+		<step executable="./run.py" quiet="true" pre_message=" * Initializing ocean state with bathymetry and tracers" post_message=" - Complete: ocean.nc"/>
 	</case>
+	<case name="forward">
+		<step executable="./run.py" quiet="true" pre_message=" * Running forward ocean model" post_message=" - Complete"/>
+	</case>
+	<validation>
+		<compare_fields file1="forward/output.nc">
+			<template file="prognostic_comparison.xml" path_base="script_core_dir" path="templates/validations"/>
+		</compare_fields>
+	</validation>
 </driver_script>
