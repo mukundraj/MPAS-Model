@@ -1,5 +1,11 @@
 <driver_script name="run_test.py">
 	<case name="base_mesh">
-		<step executable="./run.py" quiet="true" pre_message=" * Creating base mesh" post_message=" - Complete"/>
+		<step executable="./run.py" quiet="true" pre_message=" * Creating 2D global base mesh with jigsaw" post_message=" - Complete: base_mesh.nc"/>
+	</case>
+	<case name="culled_mesh">
+		<step executable="./run.py" quiet="true" pre_message=" * Culling land cells from 2D global mesh" post_message=" - Complete: culled_mesh.nc"/>
+	</case>
+	<case name="ocean_initial_state">
+		<step executable="./run.py" quiet="true" pre_message=" * Initializing ocean state with bathymetry and tracers" post_message=" - Complete: ocean_initial_state.nc"/>
 	</case>
 </driver_script>
