@@ -51,6 +51,9 @@
 	</streams>
 
 	<run_script name="run.py">
-		<model_run procs="1" threads="1" namelist="namelist.ocean" streams="streams.ocean"/>
+		<step executable="./metis">
+			<argument flag="graph.info">36</argument>
+		</step>
+		<model_run procs="36" threads="1" namelist="namelist.ocean" streams="streams.ocean"/>
 	</run_script>
 </config>

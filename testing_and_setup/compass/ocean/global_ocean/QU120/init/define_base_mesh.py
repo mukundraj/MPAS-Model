@@ -11,7 +11,7 @@ import numpy as np
 def cellWidthVsLatLon():
 
     ddeg = 10
-    constantCellWidth = 240
+    constantCellWidth = 120
 
     lat = np.arange(-90, 90.01, ddeg)
     lon = np.arange(-180, 180.01, ddeg)
