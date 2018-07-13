@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 % Create cell width for this mesh on a regular latitude-longitude grid.
 % Outputs:
