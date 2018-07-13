@@ -52,6 +52,5 @@
 
 	<run_script name="run.py">
 		<model_run procs="1" threads="1" namelist="namelist.ocean" streams="streams.ocean"/>
-		<step executable="./paraview_vtk_field_extractor.py --ignore_time -d maxEdges=0 -v allOnCells -f ocean.nc -o vtk_ocean_initial_state"></step>
 	</run_script>
 </config>
