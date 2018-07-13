@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<config case="ocean_initial_state">
+<config case="initial_state">
 	<get_file dest_path="initial_condition_database" file_name="salinity.80Layer.180619.nc">
 		<mirror protocol="wget" url="http://oceans11.lanl.gov/mpas_data/initial_condition_database/"/>
 	</get_file>

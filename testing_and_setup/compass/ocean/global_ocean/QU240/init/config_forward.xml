@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <config case="forward">
-	<add_link source="../ocean_initial_state/ocean.nc" dest="init.nc"/>
-	<add_link source="../ocean_initial_state/graph.info" dest="graph.info"/>
-	<add_link source="../ocean_initial_state/init_mode_forcing_data.nc" dest="forcing_data.nc"/>
+	<add_link source="../initial_state/ocean.nc" dest="init.nc"/>
+	<add_link source="../initial_state/graph.info" dest="graph.info"/>
+	<add_link source="../initial_state/init_mode_forcing_data.nc" dest="forcing_data.nc"/>
 
 	<add_executable source="metis" dest="metis"/>
 
