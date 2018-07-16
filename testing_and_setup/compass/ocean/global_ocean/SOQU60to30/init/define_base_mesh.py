@@ -11,7 +11,7 @@ import mesh_definition_tools as mdt
 
 def cellWidthVsLatLon():
 
-    ddeg = 10
+    ddeg = 0.1
 
     lat = np.arange(-90, 90.01, ddeg)
     lon = np.arange(-180, 180.01, ddeg)
@@ -26,5 +26,9 @@ def cellWidthVsLatLon():
     cellWidth = np.ones((lat.size, lon.size))
     for i in range(lon.size):
         cellWidth[:,i] = cellWidthVsLat
+
+    #print 'cellWidthSouth', cellWidthSouth
+    #print 'cellWidthNorth', cellWidthNorth
+    #print 'cellWidthVsLat', cellWidthVsLat
 
     return cellWidth,lon,lat
