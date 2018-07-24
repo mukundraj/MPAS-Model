@@ -46,6 +46,13 @@ args = ['./MpasMeshConverter.x',
         'base_mesh.nc']
 print "running", ' '.join(args)
 subprocess.check_call(args, env=os.environ.copy())
+
+print 'Step 4.1 Inject correct meshDensity variable into base mesh file'
+args = ['./inject_meshDensity.py',
+        'base_mesh.nc']
+print "running", ' '.join(args)
+subprocess.check_call(args, env=os.environ.copy())
+
 print 'Injecting bathymetry'
 args = ['./inject_bathymetry.py',
         'base_mesh.nc']
