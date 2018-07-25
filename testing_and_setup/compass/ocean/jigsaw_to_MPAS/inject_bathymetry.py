@@ -18,14 +18,20 @@ if __name__ == "__main__":
 
     # Path to bathymetry data and name of file
     data_path = "/users/sbrus/climate/bathy_data/SRTM15_plus/"
-    nc_file = "earth_relief_15s.nc"
+    data_file = "earth_relief_15s.nc"
 
     # Open NetCDF data file and read cooordintes
-    nc_fid = nc4.Dataset(data_path+nc_file,"r")
-    lon_data = nc_fid.variables['lon'][:]*dtor
-    lat_data = nc_fid.variables['lat'][:]*dtor
+    nc_data = nc4.Dataset(data_path+data_file,"r")
+    lon_data = nc_data.variables['lon'][:]*dtor
+    lat_data = nc_data.variables['lat'][:]*dtor
     
-    # Setup interpolation boxes
+    # Open NetCDF mesh file and read mesh points
+    mesh_file = sys.argv[1]
+    nc_mesh = nc4.Dataset(mesh_file,'r+')
+    lon_mesh = np.mod(nc_mesh.variables['lonCell'][:] + np.pi, 2*np.pi)-np.pi
+    lat_mesh = nc_mesh.variables['latCell'][:]
+
+    # Setup interpolation boxes (for large bathymetry datasets)
     n = 100  
     xbox = np.linspace(-180,180,n)*dtor
     ybox = np.linspace(-90,90,n)*dtor
@@ -36,47 +42,46 @@ if __name__ == "__main__":
       for j in range(n-1):
         boxes.append(np.asarray([xbox[i],xbox[i+1],ybox[j],ybox[j+1]]))
 
-    # Get mesh points
-    ds = nc4.Dataset(sys.argv[1],'r+')
-    lon_mesh = np.mod(ds.variables['lonCell'][:] + np.pi, 2*np.pi)-np.pi
-    lat_mesh = ds.variables['latCell'][:]
-    mesh_pts = np.vstack((lon_mesh,lat_mesh)).T
-
     # Initialize bathymetry
     bathymetry = np.zeros(np.shape(lon_mesh))
     bathymetry.fill(np.nan)
 
-    
+
+    # Interpolate using the mesh and data points inside each box
     for i,box in enumerate(boxes):
       print i,"/",len(boxes)
 
-      # Get data inside box
-      overlap = 0.1 
-      lon_idx, = np.where((lon_data > box[0]-overlap*dx) & (lon_data < box[1]+overlap*dx))
-      lat_idx, = np.where((lat_data > box[2]-overlap*dy) & (lat_data < box[3]+overlap*dy))
+      # Get data inside box (plus a small overlap region)
+      overlap = 0.1
+      lon_idx, = np.where((lon_data >= box[0]-overlap*dx) & (lon_data <= box[1]+overlap*dx))
+      lat_idx, = np.where((lat_data >= box[2]-overlap*dy) & (lat_data <= box[3]+overlap*dy))
       xdata = lon_data[lon_idx]
       ydata = lat_data[lat_idx]
-      zdata = nc_fid.variables['z'][lat_idx,lon_idx]
+      zdata = nc_data.variables['z'][lat_idx,lon_idx]
 
-      ## Get mesh points inside box
-      #lon_idx, = np.where((lon_mesh > box[0]) & (lon_mesh < box[1]))
-      #lat_idx, = np.where((lat_mesh > box[2]) & (lat_mesh < box[3]))
-      #idx = np.intersect1d(lon_idx,lat_idx)
-      #xmesh = lon_data[idx]
-      #ymesh = lat_data[idx]
-      #mesh_pts = np.vstack((xmesh,ymesh)).T
+      # Get mesh points inside box
+      lon_idx, = np.where((lon_mesh >= box[0]) & (lon_mesh <= box[1]))
+      lat_idx, = np.where((lat_mesh >= box[2]) & (lat_mesh <= box[3]))
+      idx = np.intersect1d(lon_idx,lat_idx)
+      xmesh = lon_mesh[idx]
+      ymesh = lat_mesh[idx]
+      mesh_pts = np.vstack((xmesh,ymesh)).T
 
+      # Interpolate bathymetry onto mesh points
       bathy = interpolate.RegularGridInterpolator((xdata,ydata),zdata.T,bounds_error=False,fill_value=np.nan)
       bathy_int = bathy(mesh_pts)
-      idx = np.where(np.isfinite(bathy_int))
-      bathymetry[idx] = bathy_int[idx] 
-      #bathymetry[idx] = bathy_int
+      bathymetry[idx] = bathy_int
 
-    #ds.createVariable('bathymetry','f8',('nCells'))
-    #ds.createVariable('cullCell','i',('nCells'))
-    ds.variables['bathymetry'][:] = bathymetry 
-    ds.variables['cullCell'][:] = ds.variables['bathymetry'][:] > 20.0
+    # Create new NetCDF variables in mesh file, if necessary
+    nc_vars = nc_mesh.variables.keys()
+    if 'bathymetry' not in nc_vars:
+      nc_mesh.createVariable('bathymetry','f8',('nCells'))
+    if 'cullCell' not in nc_vars: 
+      nc_mesh.createVariable('cullCell','i',('nCells'))
 
-    ds.close()
+    # Write to mesh file
+    nc_mesh.variables['bathymetry'][:] = bathymetry 
+    nc_mesh.variables['cullCell'][:] = nc_mesh.variables['bathymetry'][:] > 20.0
+    nc_mesh.close()
 
 
