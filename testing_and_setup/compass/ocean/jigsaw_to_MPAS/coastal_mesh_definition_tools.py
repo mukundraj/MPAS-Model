@@ -1,4 +1,4 @@
-
+import pyflann
 from  netCDF4 import Dataset
 import matplotlib.pyplot as plt
 from skimage import measure
@@ -6,6 +6,7 @@ import math
 import numpy as np
 from scipy import spatial,io
 import os
+import timeit
 from mpl_toolkits.basemap import Basemap
 plt.switch_backend('agg')
 
@@ -19,7 +20,7 @@ def CPP_projection(lon,lat,origin):
 
   return x,y
 
-
+nn_search = "flann"
 
 # Bounding boxes
 Delaware_Bay =  np.array([-75.61903,-74.22, 37.767484, 40.312747])
@@ -41,7 +42,7 @@ origin = (.5*(region_box[0]+region_box[1]), .5*(region_box[2]+region_box[3]))
 
 # Mesh parameters
 grd_box = Entire_Globe 
-ddeg = .25
+ddeg = .1
 dx_min = 1*km
 dx_max = 240*km
 grade_width = 10000*km
@@ -51,10 +52,6 @@ plot_box = US_Atlantic_Coast
 
 ######################################################################################
 ######################################################################################
-
-# Get coastlines for ploting
-m = Basemap(projection='cyl',llcrnrlat=plot_box[2],urcrnrlat=plot_box[3],\
-            llcrnrlon=plot_box[0],urcrnrlon=plot_box[1],resolution='c')
 
 # Open NetCDF file and read cooordintes
 nc_fid = Dataset(data_path+nc_file,"r")
@@ -71,6 +68,10 @@ lat_region = lat[lat_idx]
 z_region = nc_fid.variables['z'][lat_idx,lon_idx]
 print lon_region.shape, lat_region.shape
 print z_region.shape
+
+# Get coastlines for ploting
+m = Basemap(projection='cyl',llcrnrlat=plot_box[2],urcrnrlat=plot_box[3],\
+            llcrnrlon=plot_box[0],urcrnrlon=plot_box[1],resolution='c')
 
 # Plot the bathymetry data
 plt.figure()
@@ -107,7 +108,11 @@ plt.savefig('coastlines_latlon.png',bbox_inches='tight')
 # Convert to x,y and create kd-tree
 coast_pts_xy = np.copy(coast_pts)
 coast_pts_xy[:,0],coast_pts_xy[:,1] = CPP_projection(coast_pts[:,0],coast_pts[:,1],origin)
-tree = spatial.KDTree(coast_pts_xy)
+if nn_search == "kdtree":
+  tree = spatial.KDTree(coast_pts_xy)
+elif nn_search == "flann":
+  flann = pyflann.FLANN()
+  flann.build_index(coast_pts_xy,algorithm='kdtree',target_precision=.9999)
 
 # Create cell width background grid
 lat_grd = np.arange(grd_box[2],grd_box[3],ddeg)
@@ -122,8 +127,15 @@ pts = np.vstack([X_grd.ravel(), Y_grd.ravel()]).T
 
 # Find distances of background grid coordinates to the coast
 print "Finding distance"
-d,idx = tree.query(pts)
+start = timeit.default_timer()
+if nn_search == "kdtree":
+  d,idx = tree.query(pts)
+elif nn_search == "flann":
+  idx,d = flann.nn_index(pts,checks=150)
+  d = np.sqrt(d)
+end = timeit.default_timer()
 print "Done"
+print end-start, " seconds"
 
 # Make distance array that corresponds with cell_width array
 D = np.reshape(d,(ny,nx))
@@ -148,17 +160,18 @@ plt.axis('equal')
 plt.savefig('distance.png',bbox_inches='tight')
 
 # Assign background grid cell width values
-cell_width = dx_max*np.ones(D_plot.shape)
+cell_width = dx_max*np.ones(D.shape)
 
 # Compute cell width based on distance
-cell_width_dist = dx_max*np.tanh(1.0/(2*grade_width)*D_plot)+dx_min
-cell_width = np.minimum(cell_width_dist,cell_width)
+cell_width_dist = dx_max*np.tanh(1.0/(2*grade_width)*D)+dx_min
+cell_width = np.minimum(cell_width_dist,cell_width)/km
+cell_width_plot = cell_width[np.ix_(lat_idx,lon_idx)]
 
 # Save matfile
-io.savemat('cellWidthVsLatLon.mat',mdict={'cellWidthGlobal':cell_width,'lon':lon_grd_plot,'lat':lat_grd_plot})
+io.savemat('cellWidthVsLatLon.mat',mdict={'cellWidth':cell_width,'lon':lon_grd,'lat':lat_grd})
 
 plt.figure()
-plt.contourf(lon_grd_plot,lat_grd_plot,cell_width)
+plt.contourf(lon_grd_plot,lat_grd_plot,cell_width_plot)
 m.drawcoastlines()
 plt.colorbar()
 plt.axis('equal')
