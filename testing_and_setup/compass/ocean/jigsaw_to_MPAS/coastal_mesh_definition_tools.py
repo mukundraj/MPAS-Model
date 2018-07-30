@@ -15,8 +15,10 @@ km = 1000
 def CPP_projection(lon,lat,origin):
 
   R = 6378206.4
-  x = R*(lon-origin[0])*np.cos(origin[1])
-  y = R*lat
+  deg2rad = np.pi/180
+  origin = origin*deg2rad
+  x = R*(lon*deg2rad-origin[0])*np.cos(origin[1])
+  y = R*lat*deg2rad
 
   return x,y
 
@@ -40,15 +42,14 @@ nc_file = "earth_relief_15s.nc"
 
 # Bounding box of coastal refinement region
 region_box = US_Atlantic_Coast
-origin = (.5*(region_box[0]+region_box[1]), .5*(region_box[2]+region_box[3]))
 
 # Mesh parameters
 grd_box = Entire_Globe 
 ddeg = .1
 dx_min = 1*km
 dx_max = 240*km
-trans_width = 10000*km
-trans_start = 5000*km
+trans_width = 1000*km
+trans_start = 100*km
 
 # Bounding box of plotting region
 plot_box = US_Atlantic_Gulf_Coast 
@@ -66,6 +67,7 @@ lon_idx, = np.where((lon > region_box[0]) & (lon < region_box[1]))
 lat_idx, = np.where((lat > region_box[2]) & (lat < region_box[3]))
 
 # Get region data inside bounding box
+origin = np.array([.5*(region_box[0]+region_box[1]), .5*(region_box[2]+region_box[3])])
 lon_region = lon[lon_idx]
 lat_region = lat[lat_idx]
 z_region = nc_fid.variables['z'][lat_idx,lon_idx]
