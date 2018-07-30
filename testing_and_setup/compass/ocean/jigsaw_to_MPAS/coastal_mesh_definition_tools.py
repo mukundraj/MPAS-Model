@@ -118,7 +118,7 @@ if nn_search == "kdtree":
   tree = spatial.KDTree(coast_pts_xy)
 elif nn_search == "flann":
   flann = pyflann.FLANN()
-  flann.build_index(coast_pts_xy,algorithm='kdtree',target_precision=.99999)
+  flann.build_index(coast_pts_xy,algorithm='kdtree',target_precision=.999999)
 
 # Create cell width background grid
 lat_grd = np.arange(grd_box[2],grd_box[3],ddeg)
@@ -137,7 +137,7 @@ start = timeit.default_timer()
 if nn_search == "kdtree":
   d,idx = tree.query(pts)
 elif nn_search == "flann":
-  idx,d = flann.nn_index(pts,checks=300)
+  idx,d = flann.nn_index(pts,checks=400)
   d = np.sqrt(d)
 end = timeit.default_timer()
 print "Done"
