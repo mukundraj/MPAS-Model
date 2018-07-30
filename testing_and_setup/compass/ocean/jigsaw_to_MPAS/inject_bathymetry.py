@@ -12,25 +12,13 @@ import pprint
 dtor = np.pi/180.0
 rtod = 180.0/np.pi
 
-if __name__ == "__main__":
-    import sys
-
-
-    # Path to bathymetry data and name of file
-    data_path = "/users/sbrus/climate/bathy_data/SRTM15_plus/"
-    data_file = "earth_relief_15s.nc"
-
+def interpolate_bathymetry(bathy_data_file,lon_pts,lat_pts):
+  
     # Open NetCDF data file and read cooordintes
-    nc_data = nc4.Dataset(data_path+data_file,"r")
+    nc_data = nc4.Dataset(bathy_data_file,"r")
     lon_data = nc_data.variables['lon'][:]*dtor
     lat_data = nc_data.variables['lat'][:]*dtor
     
-    # Open NetCDF mesh file and read mesh points
-    mesh_file = sys.argv[1]
-    nc_mesh = nc4.Dataset(mesh_file,'r+')
-    lon_mesh = np.mod(nc_mesh.variables['lonCell'][:] + np.pi, 2*np.pi)-np.pi
-    lat_mesh = nc_mesh.variables['latCell'][:]
-
     # Setup interpolation boxes (for large bathymetry datasets)
     n = 100  
     xbox = np.linspace(-180,180,n)*dtor
@@ -46,8 +34,7 @@ if __name__ == "__main__":
     bathymetry = np.zeros(np.shape(lon_mesh))
     bathymetry.fill(np.nan)
 
-
-    # Interpolate using the mesh and data points inside each box
+    # Interpolate using inside each box
     for i,box in enumerate(boxes):
       print i,"/",len(boxes)
 
@@ -59,18 +46,38 @@ if __name__ == "__main__":
       ydata = lat_data[lat_idx]
       zdata = nc_data.variables['z'][lat_idx,lon_idx]
 
-      # Get mesh points inside box
-      lon_idx, = np.where((lon_mesh >= box[0]) & (lon_mesh <= box[1]))
-      lat_idx, = np.where((lat_mesh >= box[2]) & (lat_mesh <= box[3]))
+      # Get points inside box
+      lon_idx, = np.where((lon_pts >= box[0]) & (lon_pts <= box[1]))
+      lat_idx, = np.where((lat_pts >= box[2]) & (lat_pts <= box[3]))
       idx = np.intersect1d(lon_idx,lat_idx)
-      xmesh = lon_mesh[idx]
-      ymesh = lat_mesh[idx]
-      mesh_pts = np.vstack((xmesh,ymesh)).T
+      xpts = lon_mesh[idx]
+      ypts = lat_mesh[idx]
+      xy_pts = np.vstack((xpts,ypts)).T
 
-      # Interpolate bathymetry onto mesh points
+      # Interpolate bathymetry onto points
       bathy = interpolate.RegularGridInterpolator((xdata,ydata),zdata.T,bounds_error=False,fill_value=np.nan)
-      bathy_int = bathy(mesh_pts)
+      bathy_int = bathy(xy_pts)
       bathymetry[idx] = bathy_int
+ 
+    return bathymetry
+  
+
+
+if __name__ == "__main__":
+    import sys
+
+    # Path to bathymetry data and name of file
+    data_path = "/users/sbrus/climate/bathy_data/SRTM15_plus/"
+    data_file = "earth_relief_15s.nc"
+
+    # Open NetCDF mesh file and read mesh points
+    mesh_file = sys.argv[1]
+    nc_mesh = nc4.Dataset(mesh_file,'r+')
+    lon_mesh = np.mod(nc_mesh.variables['lonCell'][:] + np.pi, 2*np.pi)-np.pi
+    lat_mesh = nc_mesh.variables['latCell'][:]
+
+    # Interpolate bathymetry on to mesh points
+    bathymetry = interpolate_bathymetry(data_path+data_file,lon_mesh,lat_mesh)
 
     # Create new NetCDF variables in mesh file, if necessary
     nc_vars = nc_mesh.variables.keys()
