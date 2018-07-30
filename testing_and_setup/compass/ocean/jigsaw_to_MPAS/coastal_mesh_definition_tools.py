@@ -173,8 +173,8 @@ if plot_option:
 # Assign background grid cell width values
 cell_width = dx_max*np.ones(D.shape)
 
-# Compute cell width based on distanceA
-backgnd_weight = .5*(np.tanh((D-trans_start)/trans_width)+1)
+# Compute cell width based on distance
+backgnd_weight = .5*(np.tanh((D-trans_start-.5*trans_width)/(.2*trans_width))+1)
 dist_weight = 1-backgnd_weight
 cell_width = (dx_min*dist_weight+dx_max*backgnd_weight)/km
 #cell_width_dist = dx_max*np.tanh(1.0/(2*trans_width)*D)+dx_min
