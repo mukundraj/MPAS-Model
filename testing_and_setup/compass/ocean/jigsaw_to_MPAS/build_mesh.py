@@ -14,7 +14,7 @@ sys.path.append(".")
 import os
 import subprocess
 import scipy.io as sio
-import define_base_mesh
+#import define_base_mesh
 
 def removeFile(fileName):
     try:
@@ -22,9 +22,9 @@ def removeFile(fileName):
     except OSError:
         pass
 
-print 'Step 1. Build cellWidth array as function of latitude and longitude'
-cellWidth,lon,lat = define_base_mesh.cellWidthVsLatLon()
-sio.savemat('cellWidthVsLatLon.mat',{'cellWidth':cellWidth,'lon':lon,'lat':lat})
+#print 'Step 1. Build cellWidth array as function of latitude and longitude'
+#cellWidth,lon,lat = define_base_mesh.cellWidthVsLatLon()
+#sio.savemat('cellWidthVsLatLon.mat',{'cellWidth':cellWidth,'lon':lon,'lat':lat})
 
 print 'Step 2. Build mesh using JIGSAW' 
 args = ["octave","--silent","--eval",
@@ -54,19 +54,32 @@ args = ['./inject_meshDensity.py',
 print "running", ' '.join(args)
 subprocess.check_call(args, env=os.environ.copy())
 
-print 'Injecting bathymetry'
+print 'Step 5. Injecting bathymetry'
 args = ['./inject_bathymetry.py',
         'base_mesh.nc']
 print "running", ' '.join(args)
+subprocess.check_call(args, env=os.environ.copy())
+
+#print 'Step 6. Create vtk file for visualization'
+#args = ['./paraview_vtk_field_extractor.py',
+#        '--ignore_time',
+#				'-d','maxEdges=0',
+#        '-v', 'allOnCells',
+#        '-f', 'base_mesh.nc',
+#        '-o', 'base_mesh_vtk']
+#print "running", ' '.join(args)
 #subprocess.check_call(args, env=os.environ.copy())
 
-print 'Step 5. Create vtk file for visualization'
-args = ['./paraview_vtk_field_extractor.py',
-        '--ignore_time',
-				'-d','maxEdges=0',
-        '-v', 'allOnCells',
-        '-f', 'base_mesh.nc',
-        '-o', 'base_mesh_vtk']
+print 'Step 7. Cull land cells'
+args = ['./MpasCellCuller.x',
+        'base_mesh.nc',
+        'base_mesh_culled.nc']
+print "running",' '.join(args)
+subprocess.check_call(args, env=os.environ.copy())
+
+print 'Step 8. Injecting bathymetry'
+args = ['./inject_bathymetry.py',
+        'base_mesh_culled.nc']
 print "running", ' '.join(args)
 subprocess.check_call(args, env=os.environ.copy())
 
