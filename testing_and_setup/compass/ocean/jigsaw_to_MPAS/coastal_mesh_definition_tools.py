@@ -21,6 +21,7 @@ def CPP_projection(lon,lat,origin):
   return x,y
 
 nn_search = "flann"
+plot_option = True
 
 # Bounding boxes
 Delaware_Bay =  np.array([-75.61903,-74.22, 37.767484, 40.312747])
@@ -68,13 +69,8 @@ lat_idx, = np.where((lat > region_box[2]) & (lat < region_box[3]))
 lon_region = lon[lon_idx]
 lat_region = lat[lat_idx]
 z_region = nc_fid.variables['z'][lat_idx,lon_idx]
-print lon_region.shape, lat_region.shape
-print z_region.shape
-
-# Get coastlines for ploting
-m = Basemap(projection='cyl',llcrnrlat=plot_box[2],urcrnrlat=plot_box[3],\
-            llcrnrlon=plot_box[0],urcrnrlon=plot_box[1],resolution='c')
-
+ny,nx = z_region.shape
+print "Bathymetry data shape:", z_region.shape
 
 # Find coastline contours, filter out small strings
 print "Extracting coastline"
@@ -94,14 +90,23 @@ coast_pts[:,0] = (region_box[1]-region_box[0])/float(len(lon_region))*coast[:,1]
 coast_pts[:,1] = (region_box[3]-region_box[2])/float(len(lat_region))*coast[:,0] + region_box[2]
 coast_pts_plt = np.copy(coast_pts)
 
-# Plot bathymetry data and coastlines
-plt.figure()
-levels = np.linspace(np.amin(z_region),np.amax(z_region),100)
-plt.contourf(lon_region,lat_region,z_region,levels=levels)
-plt.plot(coast_pts_plt[:,0],coast_pts_plt[:,1],color='white')
-plt.colorbar()
-plt.axis('equal')
-plt.savefig('bathy_coastlines.png',bbox_inches='tight')
+if plot_option:
+  # Get coastlines for ploting
+  m = Basemap(projection='cyl',llcrnrlat=plot_box[2],urcrnrlat=plot_box[3],\
+              llcrnrlon=plot_box[0],urcrnrlon=plot_box[1],resolution='c')
+  
+  # Plot bathymetry data and coastlines
+  plt.figure()
+  levels = np.linspace(np.amin(z_region),np.amax(z_region),100)
+  ds = 10                   # Downsample
+  dsx = np.arange(0,nx,ds)  # bathy data
+  dsy = np.arange(0,ny,ds)  # to speed up
+  dsxy = np.ix_(dsy,dsx)    # plotting
+  plt.contourf(lon_region[dsx],lat_region[dsy],z_region[dsxy],levels=levels)
+  plt.plot(coast_pts_plt[:,0],coast_pts_plt[:,1],color='white')
+  plt.colorbar()
+  plt.axis('equal')
+  plt.savefig('bathy_coastlines.png',bbox_inches='tight')
 
 # Convert to x,y and create kd-tree
 coast_pts = coast_pts[np.isfinite(coast_pts).all(axis=1)]
@@ -119,7 +124,7 @@ lon_grd = np.arange(grd_box[0],grd_box[1],ddeg)
 Lon_grd,Lat_grd = np.meshgrid(lon_grd,lat_grd)
 X_grd,Y_grd = CPP_projection(Lon_grd,Lat_grd,origin)
 ny,nx = Lon_grd.shape
-print ny,nx
+print "Background grid dimensions:", ny,nx
 
 # Put backgound grid coordinates in a nx x 2 array for kd-tree query
 pts = np.vstack([X_grd.ravel(), Y_grd.ravel()]).T
@@ -139,26 +144,29 @@ print end-start, " seconds"
 # Make distance array that corresponds with cell_width array
 D = np.reshape(d,(ny,nx))
 
-# Find indicies of coordinates inside bounding box
-lon_idx, = np.where((lon_grd > plot_box[0]) & (lon_grd < plot_box[1]))
-lat_idx, = np.where((lat_grd > plot_box[2]) & (lat_grd < plot_box[3]))
 
-lon_grd_plot = lon_grd[lon_idx]
-lat_grd_plot = lat_grd[lat_idx]
-D_plot = D[np.ix_(lat_idx,lon_idx)] # numpy 2d array indexing is pretty dumb
-print D_plot.shape,D.shape
+if plot_option:
+  # Find indicies of coordinates inside plotting box
+  lon_idx, = np.where((lon_grd > plot_box[0]) & (lon_grd < plot_box[1]))
+  lat_idx, = np.where((lat_grd > plot_box[2]) & (lat_grd < plot_box[3]))
+ 
+  # Get data inside plotting box 
+  lon_grd_plot = lon_grd[lon_idx]
+  lat_grd_plot = lat_grd[lat_idx]
+  latlon_idx = np.ix_(lat_idx,lon_idx)
+  D_plot = D[latlon_idx]/km
 
-# Plot distance to coast
-plt.figure()
-levels = np.linspace(np.amin(D_plot),np.amax(D_plot),100)
-plt.contourf(lon_grd_plot,lat_grd_plot,D_plot,levels=levels)
-m.drawcoastlines()
-plt.plot(coast_pts_plt[:,0],coast_pts_plt[:,1],color='white')
-#plt.plot(Lon_grd,Lat_grd,'k-',lw=0.5,alpha=0.5)
-#plt.plot(Lon_grd.T,Lat_grd.T,'k-',lw=0.5,alpha=0.5)
-plt.colorbar()
-plt.axis('equal')
-plt.savefig('distance.png',bbox_inches='tight')
+  # Plot distance to coast
+  plt.figure()
+  levels = np.linspace(np.amin(D_plot),np.amax(D_plot),10)
+  plt.contourf(lon_grd_plot,lat_grd_plot,D_plot,levels=levels)
+  m.drawcoastlines()
+  plt.plot(coast_pts_plt[:,0],coast_pts_plt[:,1],color='white')
+  plt.plot(Lon_grd[latlon_idx],Lat_grd[latlon_idx],'k-',lw=0.1,alpha=0.5)
+  plt.plot(Lon_grd[latlon_idx].T,Lat_grd[latlon_idx].T,'k-',lw=0.1,alpha=0.5)
+  plt.colorbar()
+  plt.axis('equal')
+  plt.savefig('distance.png',bbox_inches='tight')
 
 # Assign background grid cell width values
 cell_width = dx_max*np.ones(D.shape)
@@ -174,18 +182,16 @@ cell_width_plot = cell_width[np.ix_(lat_idx,lon_idx)]
 # Save matfile
 io.savemat('cellWidthVsLatLon.mat',mdict={'cellWidth':cell_width,'lon':lon_grd,'lat':lat_grd})
 
-plt.figure()
-plt.contourf(lon_grd_plot,lat_grd_plot,cell_width_plot)
-m.drawcoastlines()
-plt.plot(coast_pts_plt[:,0],coast_pts_plt[:,1],color='white')
-plt.colorbar()
-plt.axis('equal')
-plt.savefig('cell_width.png',bbox_inches='tight')
+if plot_option:
+  # Plot cell width
+  plt.figure()
+  levels = np.linspace(np.amin(cell_width_plot),np.amax(cell_width_plot),100)
+  plt.contourf(lon_grd_plot,lat_grd_plot,cell_width_plot,levels=levels)
+  m.drawcoastlines()
+  plt.plot(coast_pts_plt[:,0],coast_pts_plt[:,1],color='white')
+  plt.colorbar()
+  plt.axis('equal')
+  plt.savefig('cell_width.png',bbox_inches='tight')
 
-# Show figures and wait to exit
-#plt.show()
-#plt.show(block=False)
-#raw_input(' exit?: ')
-#plt.close()
 
 
