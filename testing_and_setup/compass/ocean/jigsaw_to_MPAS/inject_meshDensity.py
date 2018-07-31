@@ -1,5 +1,10 @@
 #!/usr/bin/env python
 # Simple script to inject mesh density onto a mesh
+# example usage:
+#   ./inject_meshDensity.py cellWidthVsLatLon.mat base_mesh.nc
+# where: 
+#   cellWidthVsLatLon.mat is a matlab workspace file with cell width
+#   base_mesh.nc is the mpas netcdf file where meshDensity is added
 # Mark Petersen, 7/24/2018
 
 import matplotlib.pyplot as plt
@@ -14,7 +19,7 @@ rtod = 180.0/np.pi
 if __name__ == "__main__":
     import sys
 
-    matData = sio.loadmat('cellWidthVsLatLon.mat')
+    matData = sio.loadmat(sys.argv[1])
     cellWidth = matData['cellWidth']
     LonPos = matData['lon'].T*dtor
     LatPos = matData['lat'].T*dtor
@@ -22,12 +27,14 @@ if __name__ == "__main__":
     meshDensityVsLatLon = ( minCellWidth / cellWidth )**4
     print 'minimum cell width in grid definition:', minCellWidth
     print 'maximum cell width in grid definition:', cellWidth.max()
-    print 'cellWidth',cellWidth
-    print 'meshDensityVsLatLon',meshDensityVsLatLon
+    print 'cellWidth, south to north:'
+    print cellWidth
+    print 'meshDensityVsLatLon, south to north, smallest cell gets a 1:'
+    print meshDensityVsLatLon
 
     LON, LAT = np.meshgrid(LonPos, LatPos)
 
-    ds = nc4.Dataset(sys.argv[1],'r+')
+    ds = nc4.Dataset(sys.argv[2],'r+')
     meshDensity = ds.variables["meshDensity"][:]
 
     print "Preparing interpolation of meshDensity from lat/lon to mesh..."

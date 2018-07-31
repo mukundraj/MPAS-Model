@@ -49,6 +49,7 @@ subprocess.check_call(args, env=os.environ.copy())
 
 print 'Step 4.1 Inject correct meshDensity variable into base mesh file'
 args = ['./inject_meshDensity.py',
+        'cellWidthVsLatLon.mat',
         'base_mesh.nc']
 print "running", ' '.join(args)
 subprocess.check_call(args, env=os.environ.copy())
