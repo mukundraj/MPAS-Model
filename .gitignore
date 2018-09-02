@@ -60,3 +60,6 @@ stream_list.*
 *.i90
 
 src/core_*/inc
+
+# Dynamic libraties
+*.so

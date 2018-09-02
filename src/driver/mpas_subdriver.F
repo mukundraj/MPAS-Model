@@ -52,14 +52,15 @@ module mpas_subdriver
       use mpas_log
  
       implicit none
-
+      
+      !integer, intent(out), optional :: DECAF_COMM
       integer :: iArg, nArgs
       logical :: readNamelistArg, readStreamsArg
       character(len=StrKIND) :: argument, namelistFile, streamsFile
       character(len=StrKIND) :: timeStamp
       integer :: ierr
       integer :: blockID
-
+      
       character(kind=c_char), dimension(StrKIND+1) :: c_filename       ! StrKIND+1 for C null-termination character
       integer(kind=c_int) :: c_comm
       integer(kind=c_int) :: c_ierr
@@ -82,6 +83,10 @@ module mpas_subdriver
       logical :: streamsExists
       integer :: mesh_iotype
 
+      ! added by mraj
+      integer :: ierror, rank, commsize
+      integer :: DECAF_COMM=0 
+
       interface
          subroutine xml_stream_parser(xmlname, mgr_p, comm, ierr) bind(c)
             use iso_c_binding, only : c_char, c_ptr, c_int
@@ -101,8 +106,18 @@ module mpas_subdriver
             character(kind=c_char), dimension(*), intent(out) :: filename_interval
             character(kind=c_char), dimension(*), intent(out) :: io_type
             integer(kind=c_int), intent(out) :: ierr
-         end subroutine xml_stream_get_attributes
-      end interface
+         end subroutine xml_stream_get_attributes 
+
+         subroutine init_decaf () bind (c, name="init_decaf")
+              use iso_c_binding
+         end subroutine init_decaf
+
+         
+         subroutine f_MPI_Comm_c2f (comm) bind (c, name="f_MPI_Comm_c2f")
+               use iso_c_binding
+               integer :: comm
+         end subroutine f_MPI_Comm_c2f 
+       end interface
 
       readNamelistArg = .false.
       readStreamsArg = .false.
@@ -112,7 +127,6 @@ module mpas_subdriver
       do while (iArg < nArgs)
          call get_command_argument(iArg, argument)
          if (len_trim(argument) == 0) exit
-
          if ( trim(argument) == '-n' ) then
             iArg = iArg + 1
             readNamelistArg = .true.
@@ -151,11 +165,17 @@ module mpas_subdriver
 
       call mpas_allocate_domain(domain_ptr)
 
+      ! added by mraj
+      ! call MPI_Init(ierror)
+      call init_decaf() 
+      call f_MPI_Comm_c2f(DECAF_COMM) 
+      call MPI_Comm_rank(DECAF_COMM, rank, ierror)
+      
       !
       ! Initialize infrastructure
       !
-      call mpas_framework_init_phase1(domain_ptr % dminfo)
-
+      call mpas_framework_init_phase1(domain_ptr % dminfo, DECAF_COMM)
+      
 
 #ifdef CORE_ATMOSPHERE
       call atm_setup_core(corelist)
@@ -334,7 +354,7 @@ module mpas_subdriver
       end if
 
       call mpas_timer_stop('initialize')
-
+   ! end if ! skipping for higher procs. added by  mraj
    end subroutine mpas_init
 
 
@@ -343,7 +363,6 @@ module mpas_subdriver
       implicit none
 
       integer :: iErr
-
       iErr = domain_ptr % core % core_run(domain_ptr)
       if ( iErr /= 0 ) then
          call mpas_log_write('Core run failed for core '//trim(domain_ptr % core % coreName), messageType=MPAS_LOG_CRIT)
@@ -357,7 +376,13 @@ module mpas_subdriver
       use mpas_stream_manager, only : MPAS_stream_mgr_finalize
       use mpas_log, only : mpas_log_finalize
 
-      implicit none
+      implicit none  
+      
+      interface 
+          subroutine finish_decaf() bind (c, name="finish_decaf")
+             use iso_c_binding
+          end subroutine finish_decaf
+      end interface
 
       integer :: iErr
 
@@ -392,7 +417,9 @@ module mpas_subdriver
 
       deallocate(corelist % domainlist)
       deallocate(corelist)
-
+      
+      ! added by mraj
+      call finish_decaf()
    end subroutine mpas_finalize
 
 

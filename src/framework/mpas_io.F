@@ -16,6 +16,14 @@ module mpas_io
    use piolib_mod
    use pionfatt_mod
    use pio_types
+   
+   ! added by mraj
+   integer :: my_proc_id, k1, l1
+   integer :: num_vars_loaded = 0
+   integer :: total_vars = 3
+   integer :: nVertLevels, nVertices, nCells, n_procs
+   real, allocatable, dimension(:) :: velocityX, velocityY, velocityZ, zTop, xCell, yCell, zCell, xVertex, yVertex, zVertex;
+   integer, allocatable, dimension(:) :: cellsOnVertex, indexToCellID;
 
 #ifdef SINGLE_PRECISION
    integer, parameter :: PIO_REALKIND = PIO_REAL
@@ -44,7 +52,39 @@ module mpas_io
    real (kind=RKIND), parameter :: MPAS_REAL_FILLVAL = NF_FILL_DOUBLE
 #endif
 #endif
-
+   interface 
+     subroutine init_test () bind (c, name="init_test")
+        use iso_c_binding
+     end subroutine init_test
+     
+     subroutine func3 () bind (c, name="func3")
+        use iso_c_binding
+     end subroutine func3
+     
+     subroutine stage_put_intarray (i1d, n, id, frame_num) bind (c, name="stage_put_intarray")
+        use iso_c_binding
+        integer (c_int) ::  i1d (*) 
+        integer (c_int), value :: n
+        integer (c_int), value :: id
+        integer (c_int), value :: frame_num
+     end subroutine stage_put_intarray 
+     subroutine stage_put_doublearray (d1d, n, id, frame_num) bind (c, name="stage_put_doublearray")
+        use iso_c_binding
+        real (c_double) ::  d1d (*) 
+        integer (c_int), value :: n
+        integer (c_int), value :: id
+        integer (c_int), value :: frame_num
+     end subroutine stage_put_doublearray 
+     subroutine decaf_put (id, frame_no, nVertices, nCells, nVertLevels, n_procs) bind (c, name="decaf_put")
+        use iso_c_binding
+        integer (c_int), value :: id
+        integer (c_int), value :: frame_no
+        integer (c_int), value :: nVertices
+        integer (c_int), value :: nCells
+        integer (c_int), value :: nVertLevels
+        integer (c_int), value :: n_procs
+     end subroutine  
+end interface
    interface MPAS_io_get_var
       module procedure MPAS_io_get_var_int0d
       module procedure MPAS_io_get_var_int1d
@@ -93,6 +133,8 @@ module mpas_io
       module procedure MPAS_io_put_att_text
    end interface MPAS_io_put_att
 
+
+
    contains
 
 
@@ -109,7 +151,10 @@ module mpas_io
       integer :: local_ierr
 
       local_ierr = 0
-
+      ! mukund 
+      print *, "in MPAS_io_init ", io_task_count, ioContext % dminfo % my_proc_id, ioContext % dminfo % nprocs
+     ! call init_test()
+       n_procs = ioContext % dminfo % nprocs  
 !      call mpas_log_write('Called MPAS_io_init()')
       if (present(ierr)) ierr = MPAS_IO_NOERR
 
@@ -139,7 +184,7 @@ module mpas_io
          if ( local_ierr /= 0 ) then
             call mpas_log_write('Invalid PIO configuration.', MPAS_LOG_CRIT)
          end if
-
+         
          allocate(ioContext % pio_iosystem)
          call PIO_init(ioContext % dminfo % my_proc_id, &  ! comp_rank
                        ioContext % dminfo % comm,       &  ! comp_comm
@@ -148,9 +193,8 @@ module mpas_io
                        io_task_stride,            &     ! stride
                        PIO_rearr_box,             &     ! rearr
                        ioContext % pio_iosystem)           ! iosystem
-  
+         my_proc_id = ioContext % dminfo % my_proc_id
       end if
-
       call pio_seterrorhandling(ioContext % pio_iosystem, PIO_BCAST_ERROR)
 
    end subroutine MPAS_io_init
@@ -1904,10 +1948,10 @@ module mpas_io
             end if
          end if
       else if (present(intArray1d)) then
-!         call mpas_log_write('  value is int1')
          if (associated(field_cursor % fieldhandle % decomp)) then
             call PIO_read_darray(handle % pio_file, field_cursor % fieldhandle % field_desc, field_cursor % fieldhandle % decomp % pio_iodesc, &
                                  intArray1d, pio_ierr)
+
          else
             if (field_cursor % fieldhandle % has_unlimited_dim) then
                start2(1) = 1
@@ -1923,6 +1967,15 @@ module mpas_io
          end if
       else if (present(intArray2d)) then
 !         call mpas_log_write('  value is int2')
+         ! mraj i2d cellsOnVertex
+         ! if (fieldname == "cellsOnVertex") then
+             !print *, "cellsOnVertex", my_proc_id, size(intArray2d)
+                   ! do l1=1,10
+                    ! print *, intArray1d(l1)
+                    !end do
+
+         ! end if
+          
          if (associated(field_cursor % fieldhandle % decomp)) then
             call PIO_read_darray(handle % pio_file, field_cursor % fieldhandle % field_desc, field_cursor % fieldhandle % decomp % pio_iodesc, &
                                  intArray2d, pio_ierr)
@@ -2298,8 +2351,9 @@ module mpas_io
       real (kind=R8KIND), dimension(:,:,:), allocatable :: doubleArray3d
       real (kind=R8KIND), dimension(:,:,:,:), allocatable :: doubleArray4d
       real (kind=R8KIND), dimension(:,:,:,:,:), allocatable :: doubleArray5d
-
-      ! Sanity checks
+      
+            
+     ! Sanity checks
       if (.not. handle % initialized) then
          if (present(ierr)) ierr = MPAS_IO_ERR_UNINIT_HANDLE
          return 
@@ -2416,6 +2470,9 @@ module mpas_io
             end do
          end if
       else if (present(realArray1d)) then
+         !if (my_proc_id==0) then
+          ! print *, 'realArray1d: ',fieldname
+         !end if 
          if ((field_cursor % fieldhandle % precision == MPAS_IO_SINGLE_PRECISION) .and. &
              (MPAS_IO_NATIVE_PRECISION /= MPAS_IO_SINGLE_PRECISION)) then
             allocate(singleArray1d(size(realArray1d)))
@@ -2423,6 +2480,10 @@ module mpas_io
             if (associated(field_cursor % fieldhandle % decomp)) then
                call PIO_write_darray(handle % pio_file, field_cursor % fieldhandle % field_desc, field_cursor % fieldhandle % decomp % pio_iodesc, &
                                      singleArray1d, pio_ierr)
+               if (my_proc_id==0) then
+                  print *,'s1d: ', fieldname
+               end if
+
             else
                if (field_cursor % fieldhandle % has_unlimited_dim) then
                   start2(1) = 1
@@ -2444,6 +2505,7 @@ module mpas_io
             if (associated(field_cursor % fieldhandle % decomp)) then
                call PIO_write_darray(handle % pio_file, field_cursor % fieldhandle % field_desc, field_cursor % fieldhandle % decomp % pio_iodesc, &
                                      doubleArray1d, pio_ierr)
+
             else
                if (field_cursor % fieldhandle % has_unlimited_dim) then
                   start2(1) = 1
@@ -2462,6 +2524,53 @@ module mpas_io
             if (associated(field_cursor % fieldhandle % decomp)) then
                call PIO_write_darray(handle % pio_file, field_cursor % fieldhandle % field_desc, field_cursor % fieldhandle % decomp % pio_iodesc, &
                                      realArray1d, pio_ierr)
+            ! xCell, yCell, zCell
+            !if (my_proc_id==0) then
+             !      print *,'decomp_1d: ', fieldname  
+            !end if
+            !print *, 'decomp 1d ', fieldname
+            if (fieldname=="xCell") then
+                allocate(xCell(size(realArray1d)))
+                xCell = realArray1d
+                print *, 'staging xCell'   
+                call stage_put_doublearray (xCell, size(xCell), 1, int(handle % frame_number,4))
+                nCells = size(xCell)
+            end if
+            if (fieldname=="yCell") then
+                allocate(yCell(size(realArray1d)))
+                yCell = realArray1d
+                print *, "staging yCell"
+                call stage_put_doublearray (yCell, size(yCell), 2, int(handle % frame_number,4))
+            end if
+
+            if (fieldname=="zCell") then
+               allocate(zCell(size(realArray1d)))
+               zCell = realArray1d 
+               print *, "staging zCell"
+               call stage_put_doublearray (zCell, size(zCell), 3, int(handle % frame_number,4))
+            end if
+
+            if (fieldname=="xVertex") then
+                allocate(xVertex(size(realArray1d)))
+                xVertex = realArray1d
+                print *, "staging xVertex"
+                call stage_put_doublearray (xVertex, size(xVertex), 8, int(handle % frame_number,4))
+                nVertices = size(xVertex) 
+            end if
+
+            if (fieldname=="yVertex") then
+               allocate(yVertex(size(realArray1d)))
+               yVertex = realArray1d 
+               print *, "staging yVertex"
+               call stage_put_doublearray (yVertex, size(yVertex), 9, int(handle % frame_number,4)) 
+             end if
+            
+            if (fieldname=="zVertex") then 
+               allocate(zVertex(size(realArray1d)))
+               zVertex = realArray1d
+               print *, "staging zVertex"
+               call stage_put_doublearray (zVertex, size(zVertex), 10, int(handle % frame_number,4))
+            end if
             else
                if (field_cursor % fieldhandle % has_unlimited_dim) then
                   start2(1) = 1
@@ -2503,11 +2612,16 @@ module mpas_io
             deallocate(singleArray2d)
          else if ((field_cursor % fieldhandle % precision == MPAS_IO_DOUBLE_PRECISION) .and. &
              (MPAS_IO_NATIVE_PRECISION /= MPAS_IO_DOUBLE_PRECISION)) then
+            print *, fieldname, " double precision 1"
             allocate(doubleArray2d(size(realArray2d,1), size(realArray2d,2)))
             doubleArray2d(:,:) = real(realArray2d(:,:),R8KIND)
             if (associated(field_cursor % fieldhandle % decomp)) then
                call PIO_write_darray(handle % pio_file, field_cursor % fieldhandle % field_desc, field_cursor % fieldhandle % decomp % pio_iodesc, &
                                      doubleArray2d, pio_ierr)
+               !if (my_proc_id==0) then
+                !  print *,'d2d: ', fieldname
+               !end if
+
             else
                if (field_cursor % fieldhandle % has_unlimited_dim) then
                   start3(1) = 1
@@ -2517,7 +2631,7 @@ module mpas_io
                   count3(2) = field_cursor % fieldhandle % dims(2) % dimsize
                   count3(3) = 1
                   pio_ierr = PIO_put_var(handle % pio_file, field_cursor % fieldhandle % field_desc, start3, count3, doubleArray2d)
-               else
+                else
                   start2(:) = 1
                   count2(1) = field_cursor % fieldhandle % dims(1) % dimsize
                   count2(2) = field_cursor % fieldhandle % dims(2) % dimsize
@@ -2529,6 +2643,60 @@ module mpas_io
             if (associated(field_cursor % fieldhandle % decomp)) then
                call PIO_write_darray(handle % pio_file, field_cursor % fieldhandle % field_desc, field_cursor % fieldhandle % decomp % pio_iodesc, &
                                      realArray2d, pio_ierr)
+               ! added by mraj
+                
+               !if (fieldname == "velocityX" .and. my_proc_id==0) then
+                !  print *, fieldname, ' ',  my_proc_id, handle % frame_number
+                 ! print *, 'is not varArray, size = ', size(realArray2d, 1), ' x ', size(realArray2d, 2), ' = ', size(realArray2d)
+                  !do k1=1,10
+                  !  do l1=1,20
+                     !print *, realArray2d(1,l1)
+                   ! end do
+                  !end do
+               !end if
+               !if (my_proc_id==0) then
+                !  print *, 'real2d ', fieldname
+               !end if
+              if (fieldname=="velocityX") then
+                allocate(velocityX(size(realArray2d,1)*size(realArray2d,2)))
+                velocityX = reshape(realArray2d, shape=[size(realArray2d,1)*size(realArray2d,2)])
+                print *, "staging velocityX", size(velocityX)
+                nVertLevels = size(realArray2d,1)                
+                call stage_put_doublearray (velocityX, size(velocityX), 4, int(handle % frame_number, 4))
+              end if
+            if (fieldname=="velocityY") then 
+               allocate(velocityY(size(realArray2d,1)*size(realArray2d,2)))
+                velocityY = reshape(realArray2d, shape=[size(realArray2d,1)*size(realArray2d,2)])
+               print *, "staging velocityY", handle % frame_number
+                call stage_put_doublearray (velocityY, size(velocityY), 5, int(handle % frame_number, 4))
+
+            endif
+            if (fieldname=="velocityZ") then
+              allocate(velocityZ(size(realArray2d,1)*size(realArray2d,2)))     
+             velocityZ = reshape(realArray2d, shape=[size(realArray2d,1)*size(realArray2d,2)])
+               print *, "staging velocityZ"
+              call stage_put_doublearray (velocityZ, size(velocityZ), 6, int(handle % frame_number, 4))
+            end if   
+            if (fieldname=="zTop") then 
+               allocate(zTop(size(realArray2d,1)*size(realArray2d,2)))
+               zTop = reshape(realArray2d, shape=[size(realArray2d,1)*size(realArray2d,2)])
+               print *, "staging zTop"
+
+            call stage_put_doublearray (zTop, size(zTop), 7, int(handle % frame_number, 4))  
+            if (handle % frame_number > 1) then 
+                   print *, 'staging indexToCellID in frame > 1'
+                   call stage_put_intarray (indexToCellID, size(indexToCellID), 0, int(handle % frame_number, 4))
+                   !call stage_put_intarray (indexToVertexID, size(indexToVertexID), 7, int(handle % frame_number, 4)) 
+
+                   call decaf_put(11, int(handle % frame_number, 4), nVertices, nCells, nVertLevels, n_procs)
+                   deallocate(velocityX)
+                   deallocate(velocityY)
+                   deallocate(velocityZ)
+                   deallocate(zTop)
+               end if   
+            end if   
+               
+                
             else
                if (field_cursor % fieldhandle % has_unlimited_dim) then
                   start3(1) = 1
@@ -2814,6 +2982,23 @@ module mpas_io
          if (associated(field_cursor % fieldhandle % decomp)) then
             call PIO_write_darray(handle % pio_file, field_cursor % fieldhandle % field_desc, field_cursor % fieldhandle % decomp % pio_iodesc, &
                                   intArray1d, pio_ierr)
+
+            if (fieldname=="indexToCellID") then
+                allocate(indexToCellID(size(intArray1d)))
+                indexToCellID  = intArray1d
+                print *, 'staging indexToCellID in frame 1'
+                call stage_put_intarray (indexToCellID, size(indexToCellID), 0, int(handle % frame_number, 4))
+            end if
+            if (fieldname=="indexToVertexID") then 
+               !allocate(indexToVertexID(size(intArray1d)))
+               !indexToVertexID = intArray1d
+               print *, "staging indexToVertexID"
+               call stage_put_intarray (intArray1d, size(intArray1d), 7, int(handle % frame_number, 4))
+                  ! do l1=1,20
+                   !  print *, intArray1d(l1)
+                  ! end do
+           end if
+             
          else
             if (field_cursor % fieldhandle % has_unlimited_dim) then
                start2(1) = 1
@@ -2831,6 +3016,31 @@ module mpas_io
          if (associated(field_cursor % fieldhandle % decomp)) then
             call PIO_write_darray(handle % pio_file, field_cursor % fieldhandle % field_desc, field_cursor % fieldhandle % decomp % pio_iodesc, &
                                   intArray2d, pio_ierr)
+            !if (my_proc_id==0) then
+            ! print *,'i2d: ', fieldname
+            !end if
+             if (fieldname=="cellsOnVertex") then 
+               allocate(cellsOnVertex(size(intArray2d,1)*size(intArray2d,2)))
+               cellsOnVertex = reshape(intArray2d, shape=[size(intArray2d,1)*size(intArray2d,2)])
+               print *, "staging cellsOnVertex"
+               call stage_put_intarray (cellsOnVertex, size(cellsOnVertex), 12, int(handle % frame_number, 4))   
+              
+               if (handle % frame_number == 1) then 
+                   call decaf_put(12, int (handle % frame_number, 4),  nVertices, nCells, nVertLevels, n_procs)
+                   deallocate(velocityX)
+                   deallocate(velocityY)
+                   deallocate(velocityZ)
+                   deallocate(zTop)
+                   deallocate(cellsOnVertex)
+                   deallocate(xCell)
+                   deallocate(yCell)
+                   deallocate(zCell)
+                   deallocate(xVertex)
+                   deallocate(yVertex)
+                   deallocate(zVertex)
+               end if
+            end if
+ 
          else
             if (field_cursor % fieldhandle % has_unlimited_dim) then
                start3(1) = 1
@@ -4891,6 +5101,10 @@ module mpas_io
 
       integer :: pio_ierr
       type (decomplist_type), pointer :: decomp_cursor, decomp_del
+
+       ! added by mraj
+       deallocate(indexToCellID)
+       !deallocate(indexToVertexID)
 
 !      call mpas_log_write('Called MPAS_io_finalize()')
       if (present(ierr)) ierr = MPAS_IO_NOERR
