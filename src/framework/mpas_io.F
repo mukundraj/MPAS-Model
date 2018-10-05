@@ -23,7 +23,7 @@ module mpas_io
    integer :: total_vars = 3
    integer :: nVertLevels, nVertices, nCells, n_procs
    real, allocatable, dimension(:) :: velocityX, velocityY, velocityZ, zTop, xCell, yCell, zCell, xVertex, yVertex, zVertex;
-   integer, allocatable, dimension(:) :: cellsOnVertex, indexToCellID;
+   integer, allocatable, dimension(:) :: cellsOnVertex, indexToCellID, verticesOnCell;
 
 #ifdef SINGLE_PRECISION
    integer, parameter :: PIO_REALKIND = PIO_REAL
@@ -3019,6 +3019,13 @@ end interface
             !if (my_proc_id==0) then
             ! print *,'i2d: ', fieldname
             !end if
+
+            if (fieldname=="verticesOnCell") then 
+                 allocate(verticesOnCell(size(intArray2d,1)*size(intArray2d,2)))
+                 verticesOnCell = reshape(intArray2d, shape=[size(intArray2d,1)*size(intArray2d,2)])
+                 print *, "staging verticesOnCell"
+                 call stage_put_intarray (verticesOnCell, size(verticesOnCell), 13, int(handle % frame_number, 4))
+            endif
              if (fieldname=="cellsOnVertex") then 
                allocate(cellsOnVertex(size(intArray2d,1)*size(intArray2d,2)))
                cellsOnVertex = reshape(intArray2d, shape=[size(intArray2d,1)*size(intArray2d,2)])
@@ -3038,6 +3045,7 @@ end interface
                    deallocate(xVertex)
                    deallocate(yVertex)
                    deallocate(zVertex)
+                   deallocate(verticesOnCell)
                end if
             end if
  
