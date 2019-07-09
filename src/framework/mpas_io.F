@@ -17,6 +17,11 @@ module mpas_io
    use pionfatt_mod
    use pio_types
 
+   ! added by mraj
+   integer :: nVertLevels, nVertices, nCells, n_procs
+   real, allocatable, dimension(:) :: uVertexVelocity, vVertexVelocity, wVertexVelocity, zTop, zMid, xCell, yCell, zCell, xVertex, yVertex, zVertex, vertVelocityTop;
+   integer, allocatable, dimension(:) :: cellsOnVertex, indexToCellID, indexToVertexID, verticesOnEdge, verticesOnCell, nEdgesOnCell, maxLevelCell, boundaryVertex, cellsOnCell;
+
 #ifdef SINGLE_PRECISION
    integer, parameter :: PIO_REALKIND = PIO_REAL
 #else
@@ -44,6 +49,26 @@ module mpas_io
    real (kind=RKIND), parameter :: MPAS_REAL_FILLVAL = NF_FILL_DOUBLE
 #endif
 #endif
+
+   interface
+      subroutine decaf_put_double_array (id, frame_no, n, d1d) bind (c, name="decaf_put_double_array")
+        use iso_c_binding
+        integer (c_int), value :: id
+        integer (c_int), value :: frame_no
+        integer (c_int), value :: n
+        real (c_double) ::  d1d (*) 
+      end subroutine decaf_put_double_array 
+
+      subroutine decaf_put_int_array (id, frame_no, n, i1d) bind (c, name="decaf_put_int_array")
+        use iso_c_binding
+        integer (c_int), value :: id
+        integer (c_int), value :: frame_no
+        integer (c_int), value :: n
+        integer (c_int) ::  i1d (*) 
+      end subroutine decaf_put_int_array
+
+
+   end interface
 
    interface MPAS_io_get_var
       module procedure MPAS_io_get_var_int0d
@@ -2462,6 +2487,20 @@ module mpas_io
             if (associated(field_cursor % fieldhandle % decomp)) then
                call PIO_write_darray(handle % pio_file, field_cursor % fieldhandle % field_desc, field_cursor % fieldhandle % decomp % pio_iodesc, &
                                      realArray1d, pio_ierr)
+               if (fieldname=="xCell") then
+                call decaf_put_double_array(0, int(handle % frame_number,4), size(realArray1d), realArray1d);
+               else if (fieldname=="yCell") then
+                call decaf_put_double_array(1, int(handle % frame_number,4), size(realArray1d), realArray1d);
+               else if (fieldname=="zCell") then
+                call decaf_put_double_array(2, int(handle % frame_number,4), size(realArray1d), realArray1d);
+                else if (fieldname=="xVertex") then
+                call decaf_put_double_array(3, int(handle % frame_number,4), size(realArray1d), realArray1d);
+                else if (fieldname=="yVertex") then
+                call decaf_put_double_array(4, int(handle % frame_number,4), size(realArray1d), realArray1d);
+                else if (fieldname=="zVertex") then
+                call decaf_put_double_array(5, int(handle % frame_number,4), size(realArray1d), realArray1d);
+               end if
+
             else
                if (field_cursor % fieldhandle % has_unlimited_dim) then
                   start2(1) = 1
@@ -2529,6 +2568,40 @@ module mpas_io
             if (associated(field_cursor % fieldhandle % decomp)) then
                call PIO_write_darray(handle % pio_file, field_cursor % fieldhandle % field_desc, field_cursor % fieldhandle % decomp % pio_iodesc, &
                                      realArray2d, pio_ierr)
+
+                if (fieldname=="uVertexVelocity") then
+                  allocate(uVertexVelocity(size(realArray2d,1)*size(realArray2d,2)))
+                  uVertexVelocity = reshape(realArray2d, shape=[size(realArray2d,1)*size(realArray2d,2)])
+                  call decaf_put_double_array (11, int(handle % frame_number, 4), size(uVertexVelocity), uVertexVelocity)
+                  deallocate(uVertexVelocity)
+                else if (fieldname=="vVertexVelocity") then
+                  print *, "sending vVertexVelocity"
+                  allocate(vVertexVelocity(size(realArray2d,1)*size(realArray2d,2)))
+                  vVertexVelocity = reshape(realArray2d, shape=[size(realArray2d,1)*size(realArray2d,2)])
+                  call decaf_put_double_array (12, int(handle % frame_number, 4), size(vVertexVelocity), vVertexVelocity)
+                  deallocate(vVertexVelocity)
+                else if (fieldname=="wVertexVelocity") then
+                  allocate(wVertexVelocity(size(realArray2d,1)*size(realArray2d,2)))
+                  wVertexVelocity = reshape(realArray2d, shape=[size(realArray2d,1)*size(realArray2d,2)])
+                  call decaf_put_double_array (13, int(handle % frame_number, 4), size(wVertexVelocity), wVertexVelocity)
+                  deallocate(wVertexVelocity)
+                else if (fieldname=="zTop") then 
+                  allocate(zTop(size(realArray2d,1)*size(realArray2d,2)))
+                  zTop = reshape(realArray2d, shape=[size(realArray2d,1)*size(realArray2d,2)])
+                  call decaf_put_double_array (19, int(handle % frame_number, 4), size(zTop), zTop)
+                  deallocate(zTop)
+                else if (fieldname=="zMid") then 
+                  allocate(zMid(size(realArray2d,1)*size(realArray2d,2)))
+                  zMid = reshape(realArray2d, shape=[size(realArray2d,1)*size(realArray2d,2)])
+                  call decaf_put_double_array (20, int(handle % frame_number, 4), size(zMid), zMid)
+                  deallocate(zMid)
+                else if (fieldname=="vertVelocityTop") then
+                  allocate(vertVelocityTop(size(realArray2d,1)*size(realArray2d,2)))
+                  vertVelocityTop = reshape(realArray2d, shape=[size(realArray2d,1)*size(realArray2d,2)])
+                  call decaf_put_double_array (17, int(handle % frame_number, 4), size(vertVelocityTop), vertVelocityTop)
+                  deallocate(vertVelocityTop)
+                end if
+
             else
                if (field_cursor % fieldhandle % has_unlimited_dim) then
                   start3(1) = 1
@@ -2814,6 +2887,17 @@ module mpas_io
          if (associated(field_cursor % fieldhandle % decomp)) then
             call PIO_write_darray(handle % pio_file, field_cursor % fieldhandle % field_desc, field_cursor % fieldhandle % decomp % pio_iodesc, &
                                   intArray1d, pio_ierr)
+
+              if (fieldname=="indexToCellID") then
+                  call decaf_put_int_array (7, int(handle % frame_number, 4), size(intArray1d), intArray1d)
+              else if (fieldname=="indexToVertexID") then 
+                  call decaf_put_int_array (6, int(handle % frame_number, 4), size(intArray1d), intArray1d)
+              else if (fieldname=="maxLevelCell") then
+                  call decaf_put_int_array (15, int(handle % frame_number, 4), size(intArray1d), intArray1d)
+              else if (fieldname=="nEdgesOnCell") then
+                  call decaf_put_int_array (14, int(handle % frame_number, 4), size(intArray1d), intArray1d)
+              end if
+
          else
             if (field_cursor % fieldhandle % has_unlimited_dim) then
                start2(1) = 1
@@ -2831,6 +2915,34 @@ module mpas_io
          if (associated(field_cursor % fieldhandle % decomp)) then
             call PIO_write_darray(handle % pio_file, field_cursor % fieldhandle % field_desc, field_cursor % fieldhandle % decomp % pio_iodesc, &
                                   intArray2d, pio_ierr)
+
+             if (fieldname=="verticesOnCell") then 
+               allocate(verticesOnCell(size(intArray2d,1)*size(intArray2d,2)))
+               verticesOnCell = reshape(intArray2d, shape=[size(intArray2d,1)*size(intArray2d,2)])
+               call decaf_put_int_array(10, int(handle % frame_number, 4), size(verticesOnCell), verticesOnCell)
+               deallocate(verticesOnCell)
+             else if (fieldname=="cellsOnVertex") then
+               allocate(cellsOnVertex(size(intArray2d,1)*size(intArray2d,2)))
+               cellsOnVertex = reshape(intArray2d, shape=[size(intArray2d,1)*size(intArray2d,2)])
+               call decaf_put_int_array(9, int(handle % frame_number, 4), size(cellsOnVertex), cellsOnVertex)
+               deallocate(cellsOnVertex)
+             else if (fieldname=="verticesOnEdge") then
+               allocate(verticesOnEdge(size(intArray2d,1)*size(intArray2d,2)))
+               verticesOnEdge = reshape(intArray2d, shape=[size(intArray2d,1)*size(intArray2d,2)])
+               call decaf_put_int_array(8, int(handle % frame_number, 4), size(verticesOnEdge), verticesOnEdge)
+               deallocate(verticesOnEdge)
+             else if (fieldname=="boundaryVertex") then
+              allocate(boundaryVertex(size(intArray2d,1)*size(intArray2d,2)))
+               boundaryVertex = reshape(intArray2d, shape=[size(intArray2d,1)*size(intArray2d,2)])
+               call decaf_put_int_array(16, int(handle % frame_number, 4), size(boundaryVertex), boundaryVertex)
+               deallocate(boundaryVertex)
+             else if (fieldname=="cellsOnCell") then
+              allocate(cellsOnCell(size(intArray2d,1)*size(intArray2d,2)))
+               cellsOnCell = reshape(intArray2d, shape=[size(intArray2d,1)*size(intArray2d,2)])
+               call decaf_put_int_array(18, int(handle % frame_number, 4), size(cellsOnCell), cellsOnCell)
+               deallocate(cellsOnCell)
+             end if
+
          else
             if (field_cursor % fieldhandle % has_unlimited_dim) then
                start3(1) = 1

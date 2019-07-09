@@ -82,6 +82,10 @@ module mpas_subdriver
       logical :: streamsExists
       integer :: mesh_iotype
 
+      ! added by mraj
+      integer :: ierror, rank, commsize
+      integer :: DECAF_COMM=0
+
       interface
          subroutine xml_stream_parser(xmlname, mgr_p, comm, ierr) bind(c)
             use iso_c_binding, only : c_char, c_ptr, c_int
@@ -102,6 +106,17 @@ module mpas_subdriver
             character(kind=c_char), dimension(*), intent(out) :: io_type
             integer(kind=c_int), intent(out) :: ierr
          end subroutine xml_stream_get_attributes
+
+         subroutine init_decaf () bind (c, name="init_decaf")
+            use iso_c_binding
+         end subroutine init_decaf
+
+
+         subroutine f_MPI_Comm_c2f (comm) bind (c, name="f_MPI_Comm_c2f")
+         use iso_c_binding
+         integer :: comm
+         end subroutine f_MPI_Comm_c2f 
+
       end interface
 
       readNamelistArg = .false.
@@ -150,11 +165,17 @@ module mpas_subdriver
       domain_ptr % core => corelist
 
       call mpas_allocate_domain(domain_ptr)
+      ! added by mraj
+      call init_decaf() 
+      call f_MPI_Comm_c2f(DECAF_COMM) 
+      call MPI_Comm_rank(DECAF_COMM, rank, ierror)
+
 
       !
       ! Initialize infrastructure
       !
-      call mpas_framework_init_phase1(domain_ptr % dminfo)
+      !call mpas_framework_init_phase1(domain_ptr % dminfo)
+      call mpas_framework_init_phase1(domain_ptr % dminfo, DECAF_COMM)
 
 
 #ifdef CORE_ATMOSPHERE
@@ -359,6 +380,12 @@ module mpas_subdriver
 
       implicit none
 
+      interface 
+          subroutine finish_decaf() bind (c, name="finish_decaf")
+             use iso_c_binding
+          end subroutine finish_decaf
+      end interface
+
       integer :: iErr
 
 
@@ -392,6 +419,9 @@ module mpas_subdriver
 
       deallocate(corelist % domainlist)
       deallocate(corelist)
+
+      ! added by mraj
+      call finish_decaf()
 
    end subroutine mpas_finalize
 
