@@ -243,6 +243,7 @@ module mpas_vector_reconstruction
 
     call mpas_pool_get_config(meshPool, 'on_a_sphere', on_a_sphere)
 
+
     ! loop over cell centers
     !$omp do schedule(runtime)
     do iCell = 1, nCells
@@ -356,6 +357,7 @@ module mpas_vector_reconstruction
     call mpas_pool_get_array(meshPool, 'lonCell', lonCell)
 
     call mpas_pool_get_config(meshPool, 'on_a_sphere', on_a_sphere)
+
 
     ! loop over cell centers
     !$omp do schedule(runtime)

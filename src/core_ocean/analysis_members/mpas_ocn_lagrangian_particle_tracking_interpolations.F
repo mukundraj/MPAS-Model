@@ -60,7 +60,6 @@ module ocn_lagrangian_particle_tracking_interpolations
     type (field2DReal), pointer, intent(inout) :: uvReconstructZ !< Output: Z Component of velocity reconstructed to vertices
 
     ! could add additional reconstruction techniques here with switch if desired
-
     ! assumption is made that mpas_init_reconstruct was previously called
     call ocn_RBFvertex(meshPool, filterNum, layerThickness, u, uvReconstructX, uvReconstructY, uvReconstructZ, .false., &
                        scratchPool, particleCellPool)
